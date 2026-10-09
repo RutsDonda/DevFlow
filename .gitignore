@@ -1,0 +1,31 @@
+# Node / npm
+node_modules/
+npm-debug.log
+yarn-debug.log
+pnpm-debug.log
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build artefacts
+dist/
+build/
+coverage/
+
+# Environment / secrets – never commit
+.env
+backend/.env
+backend/services/projects/.env
+frontend/.env
+services/.env
+
+# OS / IDE artefacts
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
+tmp/
+*.tmp
+*.pem
+*.key
