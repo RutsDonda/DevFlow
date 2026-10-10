@@ -1,8 +1,18 @@
 import BaseAgent from './baseAgent.js';
+import { saveDocumentation } from '../../services/projects/services/documentation.service.js';
 
 class DocumentationAgent extends BaseAgent {
   constructor() {
     super('documentation');
+  }
+
+  /**
+   * Save generated documentation.
+   * @param {Object} params - includes project, type, title, content, generatedBy
+   * @returns {Promise}
+   */
+  async _saveDoc({ project, type, title, content, generatedBy }) {
+    return await saveDocumentation(project._id, type, title, content, generatedBy);
   }
 
   async generateReadme(project, socketIO = null) {
@@ -15,7 +25,10 @@ class DocumentationAgent extends BaseAgent {
 6. API documentation (if applicable)
 7. Contributing guidelines
 8. License section`;
-    return this.execute(project, prompt, socketIO);
+    const response = await this.execute(project, prompt, socketIO);
+    const title = 'README';
+    await this._saveDoc({ project, type: 'readme', title, content: response, generatedBy: this.agentType });
+    return response;
   }
 
   async generateApiDocs(project, endpoints, socketIO = null) {
@@ -29,7 +42,10 @@ Use clear formatting with:
 - Response format
 - Example requests and responses
 - Error codes`;
-    return this.execute(project, prompt, socketIO);
+    const response = await this.execute(project, prompt, socketIO);
+    const title = 'API Documentation';
+    await this._saveDoc({ project, type: 'api-docs', title, content: response, generatedBy: this.agentType });
+    return response;
   }
 
   async generateArchitectureDocs(project, socketIO = null) {
@@ -40,7 +56,10 @@ Use clear formatting with:
 4. Technology choices and rationale
 5. Design patterns used
 6. Scalability considerations`;
-    return this.execute(project, prompt, socketIO);
+    const response = await this.execute(project, prompt, socketIO);
+    const title = 'Architecture Documentation';
+    await this._saveDoc({ project, type: 'architecture', title, content: response, generatedBy: this.agentType });
+    return response;
   }
 }
 
