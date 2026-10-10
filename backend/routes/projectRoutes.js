@@ -3,6 +3,7 @@ import { body, param } from 'express-validator';
 import { validateRequest } from '../middleware/validateRequest.js';
 import { protect } from '../middleware/auth.js';
 import { createProject, getProjects, getProject, updateProject, deleteProject, getProjectStats } from '../controllers/projectController.js';
+import projectFileRoutes from './projectFileRoutes.js';
 
 const router = Router();
 router.use(protect);
@@ -33,5 +34,7 @@ router.delete('/:id', [
 router.get('/:id/stats', [
   param('id').isMongoId().withMessage('Invalid project ID')
 ], validateRequest, getProjectStats);
+router.use('/:projectId/files', projectFileRoutes);
 
+// router.use('/:projectId/files', projectFileRoutes); // duplicate removed
 export default router;
