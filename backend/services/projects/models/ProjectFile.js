@@ -30,4 +30,15 @@ ProjectFileSchema.pre('save', function (next) {
   next();
 });
 
+// After a file is saved (create or update), mark related documentation as outdated
+ProjectFileSchema.post('save', async function (doc, next) {
+  try {
+    const { markDocsOutdated } = await import('../../services/documentationChangeTracker.js');
+    await markDocsOutdated(doc.project);
+  } catch (err) {
+    console.error('Failed to mark documentation outdated:', err);
+  }
+  next();
+});
+
 export default mongoose.model('ProjectFile', ProjectFileSchema);
