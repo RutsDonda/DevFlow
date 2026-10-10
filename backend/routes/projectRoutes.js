@@ -34,7 +34,5 @@ router.delete('/:id', [
 router.get('/:id/stats', [
   param('id').isMongoId().withMessage('Invalid project ID')
 ], validateRequest, getProjectStats);
-router.use('/:projectId/files', projectFileRoutes);
-
-// router.use('/:projectId/files', projectFileRoutes); // duplicate removed
-export default router;
+import taskRoutes from './taskRoutes.js';
+router.use('/:projectId/tasks', taskRoutes);
