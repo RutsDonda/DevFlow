@@ -4,6 +4,7 @@ import { validateRequest } from '../middleware/validateRequest.js';
 import { protect } from '../middleware/auth.js';
 import { createProject, getProjects, getProject, updateProject, deleteProject, getProjectStats } from '../controllers/projectController.js';
 import projectFileRoutes from './projectFileRoutes.js';
+import documentationRoutes from './documentationRoutes.js';
 
 const router = Router();
 router.use(protect);
@@ -36,3 +37,4 @@ router.get('/:id/stats', [
 ], validateRequest, getProjectStats);
 import taskRoutes from './taskRoutes.js';
 router.use('/:projectId/tasks', taskRoutes);
+router.use('/:projectId/docs', documentationRoutes);
