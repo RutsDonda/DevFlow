@@ -29,3 +29,21 @@ tmp/
 *.tmp
 *.pem
 *.key
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Local secret-scrubbing list (contains raw keys)
+replacements.txt
+
+# Any env variant except the documented examples
+.env.*
+*.env.backup
+!.env.example
+
+# Superseded code kept locally as backup (Flask backend, old agent UI)
+python_backend/legacy_flask/
+frontend/legacy_components/

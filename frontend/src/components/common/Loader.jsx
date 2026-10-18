@@ -7,8 +7,8 @@ const Loader = ({ size = 'md', text = 'Loading...' }) => {
 
   return (
     <div className="flex flex-col items-center justify-center gap-3">
-      <div className={`${sizes[size]} animate-spin rounded-full border-2 border-gray-700 border-t-indigo-500`} />
-      {text && <p className="text-sm text-gray-400">{text}</p>}
+      <div className={`${sizes[size]} animate-spin rounded-full border-2 border-white/15 border-t-white`} />
+      {text && <p className="text-sm text-mute">{text}</p>}
     </div>
   );
 };

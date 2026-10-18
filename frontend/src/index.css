@@ -1,27 +1,96 @@
 @import 'tailwindcss';
 
-/* Custom base styles */
+/* ChatGPT-like neutral dark palette */
+@theme {
+  --color-app: #212121;      /* main surface */
+  --color-side: #171717;     /* sidebar */
+  --color-field: #303030;    /* composer, user bubbles */
+  --color-raise: #2a2a2a;    /* hover rows, cards */
+  --color-ink: #ececec;      /* primary text */
+  --color-mute: #a3a3a3;     /* secondary text */
+  --color-faint: #6f6f6f;    /* tertiary text */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
 @layer base {
+  html, body, #root {
+    height: 100%;
+  }
+
   body {
-    @apply bg-gray-950 text-gray-100 font-sans antialiased;
+    @apply bg-app text-ink font-sans antialiased;
+  }
+
+  ::selection {
+    background: rgb(255 255 255 / 0.18);
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(255 255 255 / 0.12) transparent;
   }
 }
 
-/* Custom component styles */
 @layer components {
-  .btn-primary {
-    @apply px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-900;
-  }
-
-  .btn-secondary {
-    @apply px-4 py-2 bg-gray-700 text-gray-100 rounded-lg hover:bg-gray-600 transition-colors duration-200 font-medium focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-900;
-  }
-
-  .card {
-    @apply bg-gray-900 border border-gray-800 rounded-xl p-6 shadow-lg;
-  }
-
   .input-field {
-    @apply w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent;
+    @apply w-full rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-sm text-ink placeholder-faint transition-colors focus:border-white/30 focus:outline-none;
   }
+
+  .btn-light {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-full bg-white px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-neutral-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-full border border-white/10 px-4 py-2 text-sm text-ink transition-colors hover:bg-white/5;
+  }
+
+  /* Film grain overlay – breaks up flat digital gradients */
+  .grain::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.07;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+
+  /* "Thinking…" shimmer like ChatGPT */
+  .shimmer {
+    background: linear-gradient(90deg, #6f6f6f 0%, #ececec 50%, #6f6f6f 100%);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shimmer 1.8s linear infinite;
+  }
+
+  /* Rendered agent answers (react-markdown) */
+  .markdown {
+    @apply leading-7 break-words;
+  }
+  .markdown > * + * { @apply mt-4; }
+  .markdown h1 { @apply text-2xl font-semibold text-white mt-8; }
+  .markdown h2 { @apply text-xl font-semibold text-white mt-8; }
+  .markdown h3 { @apply text-lg font-semibold text-white mt-6; }
+  .markdown h4 { @apply font-semibold text-white mt-5; }
+  .markdown ul { @apply list-disc pl-6 space-y-1.5; }
+  .markdown ol { @apply list-decimal pl-6 space-y-1.5; }
+  .markdown li > ul, .markdown li > ol { @apply mt-1.5; }
+  .markdown a { @apply text-ink underline decoration-white/30 underline-offset-4 hover:decoration-white; }
+  .markdown strong { @apply font-semibold text-white; }
+  .markdown blockquote { @apply border-l-2 border-white/20 pl-4 text-mute; }
+  .markdown hr { @apply border-white/10 my-6; }
+  .markdown :not(pre) > code {
+    @apply rounded-md bg-white/10 px-1.5 py-0.5 font-mono text-[0.85em] text-ink;
+  }
+  .markdown pre code.hljs { @apply bg-transparent p-0; }
+  .markdown table { @apply w-full border-collapse text-left text-sm; }
+  .markdown th { @apply border-b border-white/15 px-3 py-2 font-semibold text-white; }
+  .markdown td { @apply border-b border-white/5 px-3 py-2; }
+}
+
+@keyframes shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
 }

@@ -1,105 +1,75 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAppContext } from '../context/AppContext';
-import { projectAPI } from '../services/api';
-import ProjectCard from '../components/project/ProjectCard';
-import Button from '../components/common/Button';
-import Loader from '../components/common/Loader';
-import { HiOutlineFolderPlus, HiOutlineMagnifyingGlass } from 'react-icons/hi2';
+import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { HiOutlineCubeTransparent, HiOutlineDocumentDuplicate, HiOutlinePlus } from 'react-icons/hi2';
+import { projectAPI } from '../services/api';
+import Loader from '../components/common/Loader';
+import { timeAgo } from '../utils/format';
 
 const Projects = () => {
-  const { projects, fetchProjects, isLoading, dispatch } = useAppContext();
-  const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
+  const [projects, setProjects] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetchProjects();
-  }, [fetchProjects]);
+    projectAPI.list()
+      .then(setProjects)
+      .catch((err) => toast.error(err.message))
+      .finally(() => setIsLoading(false));
+  }, []);
 
-  const handleDeleteProject = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
-      return;
-    }
-
-    try {
-      const response = await projectAPI.delete(id);
-      if (response.success) {
-        dispatch({ type: 'DELETE_PROJECT', payload: id });
-        toast.success('Project deleted successfully');
-      }
-    } catch (error) {
-      toast.error(error.message || 'Failed to delete project');
-    }
-  };
-
-  const filteredProjects = projects.filter((project) => 
-    project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    project.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const newProject = () => navigate('/', { state: { prompt: 'Scaffold a new project: ', mode: 'architect_agent' } });
 
   return (
-    <div className="space-y-6 h-full flex flex-col">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="mx-auto max-w-6xl px-4 py-8 md:px-8">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Projects</h1>
-          <p className="mt-1 text-sm text-gray-400">Manage your development projects and AI environments.</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-white">Projects</h1>
+          <p className="mt-1 text-sm text-mute">
+            Scaffolded by the <span className="text-ink">Architect agent</span>. Browse every file or download a ZIP.
+          </p>
         </div>
-        <Button variant="primary" onClick={() => navigate('/projects/create')}>
-          <HiOutlineFolderPlus className="w-5 h-5 mr-2" />
-          New Project
-        </Button>
-      </div>
-
-      <div className="relative max-w-md">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <HiOutlineMagnifyingGlass className="h-5 w-5 text-gray-500" />
-        </div>
-        <input
-          type="text"
-          className="input-field w-full pl-10"
-          placeholder="Search projects..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
+        <button onClick={newProject} className="btn-light">
+          <HiOutlinePlus className="w-4 h-4" /> New project
+        </button>
       </div>
 
       {isLoading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <Loader size="lg" />
-        </div>
-      ) : filteredProjects.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredProjects.map((project) => (
-            <div key={project._id || project.id} className="relative group">
-              <ProjectCard project={project} />
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteProject(project._id || project.id);
-                }}
-                className="absolute top-2 right-2 p-1.5 bg-red-500/10 text-red-400 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/20"
-                title="Delete Project"
-              >
-                Delete
-              </button>
-            </div>
-          ))}
+        <div className="py-20"><Loader /></div>
+      ) : projects.length === 0 ? (
+        <div className="mt-8 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-6 py-14 text-center">
+          <HiOutlineCubeTransparent className="mx-auto w-10 h-10 text-faint" />
+          <p className="mt-3 text-sm text-neutral-300">No projects yet</p>
+          <p className="mt-1 text-xs text-faint">Pick “Architect” above the message box and describe an app.</p>
         </div>
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-gray-900 border border-gray-800 rounded-xl">
-          <HiOutlineFolderPlus className="w-16 h-16 text-gray-700 mb-4" />
-          <h3 className="text-xl font-medium text-white mb-2">No projects found</h3>
-          <p className="text-gray-400 mb-6 max-w-md">
-            {searchQuery 
-              ? "We couldn't find any projects matching your search." 
-              : "You haven't created any projects yet. Start by creating your first AI-assisted project."}
-          </p>
-          {!searchQuery && (
-            <Button variant="primary" onClick={() => navigate('/projects/create')}>
-              Create Your First Project
-            </Button>
-          )}
+        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {projects.map((p) => (
+            <Link
+              key={p.id}
+              to={`/projects/${p.id}`}
+              className="group flex flex-col rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 hover:border-white/15 hover:bg-white/[0.04] transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/[0.06] flex items-center justify-center">
+                  <HiOutlineCubeTransparent className="w-5 h-5 text-sky-300" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="truncate text-sm font-semibold text-white">{p.name}</h2>
+                  <p className="text-xs text-faint">Updated {timeAgo(p.updated_at)}</p>
+                </div>
+              </div>
+              <p className="mt-3 line-clamp-2 flex-1 text-xs leading-relaxed text-mute">{p.description}</p>
+              <div className="mt-4 flex flex-wrap gap-1.5">
+                {p.tech_stack.slice(0, 5).map((t) => (
+                  <span key={t} className="rounded-full border border-white/10 px-2.5 py-0.5 text-[11px] text-neutral-300">{t}</span>
+                ))}
+              </div>
+              <div className="mt-4 flex items-center gap-1.5 border-t border-white/5 pt-3 text-xs text-faint">
+                <HiOutlineDocumentDuplicate className="w-4 h-4" /> {p.file_count} files
+              </div>
+            </Link>
+          ))}
         </div>
       )}
     </div>
