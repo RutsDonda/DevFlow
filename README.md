@@ -4,6 +4,8 @@
 > **RAG & Document agent**, a **Coding & Debugging agent** or a **Project Architect agent**. Conversations
 > are remembered via a **MongoDB checkpointer**; users sign in with **Firebase**, and all data is isolated per Firebase UID.
 
+🌐 **Live Demo:** [https://aidevflow.vercel.app](https://aidevflow.vercel.app)
+
 **Stack:** Python 3.11+ · FastAPI · LangGraph (`langgraph-supervisor`) · LangChain · MongoDB Atlas (+ Vector Search) · Firebase Auth · React 18 + Vite + Tailwind CSS v4 · Gemini (default) or OpenAI
 
 ---
