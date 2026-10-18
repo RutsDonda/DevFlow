@@ -55,6 +55,7 @@ export const threadAPI = {
   list: () => api.get('/threads'),
   get: (id) => api.get(`/threads/${id}`),
   rename: (id, title) => api.patch(`/threads/${id}`, { title }),
+  pin: (id, pinned) => api.patch(`/threads/${id}`, { pinned }),
   remove: (id) => api.delete(`/threads/${id}`),
 };
 

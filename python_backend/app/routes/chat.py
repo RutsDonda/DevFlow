@@ -5,7 +5,7 @@ app/routes/chat.py – Talk to the multi-agent system and manage conversations.
   POST   /api/chat/stream          – same, streamed as Server-Sent Events
   GET    /api/threads              – list the caller's conversations
   GET    /api/threads/{id}         – one conversation with its messages
-  PATCH  /api/threads/{id}         – rename
+  PATCH  /api/threads/{id}         – rename and/or pin
   DELETE /api/threads/{id}         – delete conversation + its LangGraph memory
 """
 
@@ -17,7 +17,7 @@ from fastapi.responses import StreamingResponse
 
 from app.core.firebase import FirebaseUser
 from app.core.security import get_registered_user
-from app.models.schemas import ChatRequest, ChatResponse, RenameThreadRequest, ThreadDetail, ThreadSummary
+from app.models.schemas import ChatRequest, ChatResponse, ThreadDetail, ThreadSummary, UpdateThreadRequest
 from app.services import threads as thread_service
 from app.services import vector_store
 from app.services.chat import run_turn_detached
@@ -91,8 +91,9 @@ async def get_thread(thread_id: str, user: FirebaseUser = Depends(get_registered
 
 
 @router.patch("/threads/{thread_id}", response_model=ThreadSummary)
-async def rename_thread(thread_id: str, body: RenameThreadRequest, user: FirebaseUser = Depends(get_registered_user)):
-    return thread_service.serialize_thread(await thread_service.rename_thread(user.uid, thread_id, body.title))
+async def update_thread(thread_id: str, body: UpdateThreadRequest, user: FirebaseUser = Depends(get_registered_user)):
+    doc = await thread_service.update_thread(user.uid, thread_id, title=body.title, pinned=body.pinned)
+    return thread_service.serialize_thread(doc)
 
 
 @router.delete("/threads/{thread_id}", status_code=204)

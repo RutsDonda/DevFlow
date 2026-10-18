@@ -56,6 +56,7 @@ class ChatThreadDoc(BaseModel):
     title: str
     messages: list[StoredMessage] = []
     last_agent: AgentName | None = None
+    pinned: bool = False
     created_at: datetime
     updated_at: datetime
 
@@ -162,6 +163,7 @@ class ThreadSummary(BaseModel):
     id: str
     title: str
     last_agent: str | None
+    pinned: bool = False
     created_at: datetime
     updated_at: datetime
 
@@ -175,8 +177,11 @@ class ChatResponse(BaseModel):
     message: MessageOut
 
 
-class RenameThreadRequest(BaseModel):
-    title: str = Field(min_length=1, max_length=120)
+class UpdateThreadRequest(BaseModel):
+    """Rename and/or pin a conversation; omitted fields are left unchanged."""
+
+    title: str | None = Field(default=None, min_length=1, max_length=120)
+    pinned: bool | None = None
 
 
 class DocumentOut(BaseModel):

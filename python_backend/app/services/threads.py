@@ -33,6 +33,7 @@ def serialize_thread(doc: dict, include_messages: bool = False) -> dict:
         "id": str(doc["_id"]),
         "title": doc["title"],
         "last_agent": doc.get("last_agent"),
+        "pinned": bool(doc.get("pinned")),
         "created_at": doc["created_at"],
         "updated_at": doc["updated_at"],
     }
@@ -58,6 +59,7 @@ async def create_thread(user_id: str, first_message: str) -> dict:
         "title": make_title(first_message),
         "messages": [],
         "last_agent": None,
+        "pinned": False,
         "created_at": now,
         "updated_at": now,
     }
@@ -79,16 +81,23 @@ async def list_threads(user_id: str, limit: int = 100) -> list[dict]:
     cursor = (
         col(CHAT_THREADS)
         .find({"user_id": user_id}, {"messages": 0})
-        .sort("updated_at", -1)
+        .sort([("pinned", -1), ("updated_at", -1)])
         .limit(limit)
     )
     return [serialize_thread(d) async for d in cursor]
 
 
-async def rename_thread(user_id: str, thread_id: str, title: str) -> dict:
+async def update_thread(user_id: str, thread_id: str, title: str | None = None, pinned: bool | None = None) -> dict:
+    """Rename and/or pin a conversation. Pinning does not touch updated_at, so order within groups is kept."""
     doc = await get_owned_thread(user_id, thread_id)
-    await col(CHAT_THREADS).update_one({"_id": doc["_id"]}, {"$set": {"title": title.strip()}})
-    doc["title"] = title.strip()
+    changes = {}
+    if title is not None:
+        changes["title"] = title.strip()
+    if pinned is not None:
+        changes["pinned"] = pinned
+    if changes:
+        await col(CHAT_THREADS).update_one({"_id": doc["_id"]}, {"$set": changes})
+        doc.update(changes)
     return doc
 
 

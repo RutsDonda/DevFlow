@@ -47,3 +47,7 @@ replacements.txt
 # Superseded code kept locally as backup (Flask backend, old agent UI)
 python_backend/legacy_flask/
 frontend/legacy_components/
+
+.vercel
+.env*
+!.env.example

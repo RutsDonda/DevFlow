@@ -89,8 +89,8 @@ const Composer = forwardRef(({
           onChange={(e) => { onAttach(e.target.files); e.target.value = ''; }}
         />
         {isRunning ? (
-          <button type="button" onClick={onStop} aria-label="Stop" className="flex h-9 w-9 items-center justify-center rounded-full bg-white hover:bg-neutral-200">
-            <span className="h-3 w-3 rounded-[3px] bg-black" />
+          <button type="button" onClick={onStop} aria-label="Stop" className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-2 hover:brightness-110">
+            <span className="h-3 w-3 rounded-[3px] bg-white" />
           </button>
         ) : (
           <button
@@ -99,7 +99,7 @@ const Composer = forwardRef(({
             disabled={!canSend}
             aria-label="Send"
             title={uploading ? 'Waiting for uploads to finish…' : undefined}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-black hover:bg-neutral-200 disabled:bg-white/20 disabled:text-white/40 transition-colors"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-2 text-white shadow-md shadow-accent/30 hover:brightness-110 disabled:from-white/10 disabled:to-white/10 disabled:text-white/40 disabled:shadow-none transition-[filter]"
           >
             <HiArrowUp className="w-5 h-5" strokeWidth={1} />
           </button>

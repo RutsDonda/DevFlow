@@ -56,7 +56,7 @@ const MessageBubble = ({ message, projects = {} }) => {
           </div>
         )}
         {message.content && (
-          <div className="max-w-[85%] md:max-w-[70%] rounded-3xl bg-field px-5 py-2.5 text-[15px] leading-7 text-ink">
+          <div className="max-w-[85%] md:max-w-[70%] rounded-3xl rounded-br-lg border border-accent/20 bg-gradient-to-br from-accent/25 to-accent-2/10 px-5 py-2.5 text-[15px] leading-7 text-ink">
             <p className="whitespace-pre-wrap break-words">{message.content}</p>
           </div>
         )}

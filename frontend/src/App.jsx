@@ -43,7 +43,7 @@ const App = () => (
       <Toaster
         position="top-right"
         toastOptions={{
-          style: { background: '#2f2f2f', color: '#ececec', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', fontSize: '14px' },
+          style: { background: '#171b2e', color: '#e8eaf6', border: '1px solid rgba(124,108,255,0.25)', borderRadius: '14px', fontSize: '14px' },
         }}
       />
     </AuthProvider>

@@ -76,7 +76,8 @@ const TerrainBackground = ({ intensity = 1, className = '' }) => {
           if (c === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
         }
         const a = fog * fog * 0.32;
-        ctx.strokeStyle = `rgba(222, 214, 200, ${a})`;
+        // near lines cyan, far lines indigo
+        ctx.strokeStyle = `rgba(${Math.round(124 - 90 * fog)}, ${Math.round(108 + 103 * fog)}, ${Math.round(255 - 17 * fog)}, ${a * 1.3})`;
         ctx.lineWidth = 0.6 + fog * 0.7;
         ctx.stroke();
       }
@@ -111,7 +112,7 @@ const TerrainBackground = ({ intensity = 1, className = '' }) => {
     <div aria-hidden className={`pointer-events-none absolute inset-0 overflow-hidden grain transition-opacity duration-700 ${className}`} style={{ opacity: intensity }}>
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
       {/* vignette + fade into the surface colour at the top */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_35%,#212121_85%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_35%,#0b0d17_85%)]" />
       <div className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-app to-transparent" />
     </div>
   );
