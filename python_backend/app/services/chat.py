@@ -13,6 +13,7 @@ plain JSON chat endpoints:
 """
 
 import asyncio
+import contextlib
 import logging
 from collections.abc import AsyncIterator
 from datetime import datetime, timezone
@@ -31,7 +32,11 @@ from app.services.projects import serialize_project
 logger = logging.getLogger(__name__)
 
 RECURSION_LIMIT = 50
+# Graph nodes that call an LLM: "model" in each worker (create_agent), "agent" in the supervisor
+MODEL_NODES = {"model", "agent"}
 _background_tasks: set[asyncio.Task] = set()
+# The turn currently running in each conversation, keyed by "<user id>:<thread id>"
+_running: dict[str, asyncio.Task] = {}
 
 
 def _text(message: BaseMessage) -> str:
@@ -123,8 +128,12 @@ async def run_turn(
             agent = _agent_of(namespace)
 
             if mode == "messages":
-                chunk, _meta = data
+                chunk, meta = data
                 if not isinstance(chunk, AIMessageChunk) or agent is None:
+                    continue
+                # Only text a model is generating right now – not finished messages re-emitted
+                # by other nodes (e.g. the "Transferring back to supervisor" handoff)
+                if meta.get("langgraph_node") not in MODEL_NODES:
                     continue
                 # Once a worker took over, the supervisor only says "DONE" – don't stream it
                 if agent == SUPERVISOR and worker_started:
@@ -134,7 +143,10 @@ async def run_turn(
                     yield {"type": "token", "agent": agent, "text": text}
                 continue
 
-            # mode == "updates": surface routing and tool usage
+            # mode == "updates": surface routing and tool usage. Top-level updates carry the
+            # whole conversation (earlier turns' handoffs included), so only read the agents' own steps.
+            if not namespace:
+                continue
             for node, update in (data or {}).items():
                 if agent in WORKERS and agent not in announced:
                     announced.add(agent)
@@ -209,6 +221,17 @@ def _friendly_error(exc: Exception) -> str:
     return f"The agents hit an error: {text[:300]}"
 
 
+async def cancel_turn(user_id: str, thread_id: str) -> bool:
+    """Stop the turn running in a conversation (if any) and wait until it has stopped."""
+    task = _running.get(f"{user_id}:{thread_id}")
+    if task is None or task.done() or task is asyncio.current_task():
+        return False
+    task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
+    return True
+
+
 def run_turn_detached(
     graph: CompiledStateGraph,
     user_id: str,
@@ -219,18 +242,31 @@ def run_turn_detached(
 ) -> asyncio.Queue:
     """
     Run a turn in a background task and return a queue of its events (None = end).
-    The turn completes and is persisted even if the HTTP client disconnects mid-stream.
+    The turn completes and is persisted even if the HTTP client disconnects mid-stream; only
+    `cancel_turn` (the Stop button) or a newer message in the same conversation stops it. That
+    way one conversation never runs two agents at once – the agent picked for the new message
+    would otherwise share the conversation memory with the one still finishing the old one.
     """
     queue: asyncio.Queue = asyncio.Queue()
+    key = None
 
     async def _pump():
+        nonlocal key
+        me = asyncio.current_task()
         try:
+            if thread_id:
+                await cancel_turn(user_id, thread_id)
             async for event in run_turn(graph, user_id, message, thread_id, agent, attachments):
+                if event["type"] == "thread" and key is None:
+                    key = f"{user_id}:{event['thread']['id']}"
+                    _running[key] = me
                 await queue.put(event)
         except Exception as exc:  # e.g. thread not found
             await queue.put({"type": "error", "message": getattr(exc, "detail", None) or str(exc)})
         finally:
-            await queue.put(None)
+            if key and _running.get(key) is me:
+                del _running[key]
+            queue.put_nowait(None)
 
     task = asyncio.create_task(_pump())
     _background_tasks.add(task)

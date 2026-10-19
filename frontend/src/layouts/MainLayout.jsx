@@ -6,11 +6,11 @@ import {
   HiOutlineCubeTransparent,
   HiOutlineDocumentText,
   HiOutlineEllipsisHorizontal,
-  HiOutlineMapPin,
   HiOutlinePencil,
   HiOutlinePencilSquare,
   HiOutlineTrash,
 } from 'react-icons/hi2';
+import { TbPinned, TbPinnedOff } from 'react-icons/tb';
 import { useAuth } from '../context/AuthContext';
 import { threadAPI } from '../services/api';
 import Logo from '../components/common/Logo';
@@ -58,12 +58,12 @@ const ThreadRow = ({ thread, active, onPin, onRename, onDelete }) => {
     <div ref={ref} className="relative group">
       <NavLink
         to={`/c/${thread.id}`}
-        className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors ${
+        className={`flex items-center gap-2 rounded-lg py-2 pl-3 pr-9 text-sm transition-colors ${
           active ? 'bg-accent/15 text-white ring-1 ring-inset ring-accent/25' : 'text-neutral-300 hover:bg-white/[0.05]'
         }`}
       >
-        {thread.pinned && <HiOutlineMapPin className="mr-2 w-3.5 h-3.5 flex-shrink-0 text-accent-2" aria-label="Pinned" />}
-        <span className="truncate flex-1 pr-6">{thread.title}</span>
+        {thread.pinned && <TbPinned className="w-4 h-4 flex-shrink-0 text-accent-2" aria-label="Pinned" />}
+        <span className="min-w-0 flex-1 truncate">{thread.title}</span>
       </NavLink>
       <button
         onClick={() => setMenu((m) => !m)}
@@ -77,7 +77,7 @@ const ThreadRow = ({ thread, active, onPin, onRename, onDelete }) => {
       {menu && (
         <div className="absolute right-0 top-full z-20 mt-1 w-40 overflow-hidden rounded-xl border border-white/10 bg-field py-1 shadow-2xl shadow-black/50">
           <button onClick={() => { setMenu(false); onPin(thread); }} className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-ink hover:bg-white/5">
-            <HiOutlineMapPin className="w-4 h-4" /> {thread.pinned ? 'Unpin' : 'Pin'}
+            {thread.pinned ? <TbPinnedOff className="w-4 h-4" /> : <TbPinned className="w-4 h-4" />} {thread.pinned ? 'Unpin' : 'Pin'}
           </button>
           <button onClick={() => { setMenu(false); onRename(thread); }} className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-ink hover:bg-white/5">
             <HiOutlinePencil className="w-4 h-4" /> Rename
@@ -148,7 +148,7 @@ const MainLayout = () => {
   }`;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-app">
+    <div className="flex h-dvh overflow-hidden bg-app">
       {/* Mobile backdrop */}
       {open && <div className="fixed inset-0 z-30 bg-black/50 md:hidden" onClick={() => setOpen(false)} />}
 

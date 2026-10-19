@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { HiExclamationCircle } from 'react-icons/hi2';
 import Logo from '../common/Logo';
-import TerrainBackground from '../common/TerrainBackground';
 
 const GoogleIcon = () => (
   <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden>
@@ -16,7 +16,7 @@ export const GoogleButton = ({ onClick, disabled, children }) => (
     type="button"
     onClick={onClick}
     disabled={disabled}
-    className="flex w-full items-center justify-center gap-3 rounded-full border border-white/15 bg-app/60 px-4 py-3 text-sm text-ink hover:bg-white/[0.06] transition-colors disabled:opacity-60"
+    className="flex w-full items-center justify-center gap-3 rounded-full border border-white/15 px-4 py-2.5 text-sm font-medium text-ink hover:bg-white/[0.05] transition-colors disabled:opacity-60"
   >
     <GoogleIcon />
     {children}
@@ -26,33 +26,102 @@ export const GoogleButton = ({ onClick, disabled, children }) => (
 export const Divider = ({ label }) => (
   <div className="my-5 flex items-center gap-3">
     <div className="h-px flex-1 bg-white/10" />
-    <span className="text-xs uppercase tracking-wider text-faint">{label}</span>
+    <span className="text-xs text-faint">{label}</span>
     <div className="h-px flex-1 bg-white/10" />
   </div>
 );
 
-export const Field = ({ label, id, ...props }) => (
+/** Outlined input with a label that floats onto the border, plus an inline error line. */
+export const Field = ({ label, id, error, ...props }) => (
   <div>
-    <label htmlFor={id} className="mb-1.5 block text-xs text-mute">{label}</label>
-    <input id={id} {...props} className="input-field !rounded-full !px-4 !py-3 bg-app/60" />
+    <div className="relative">
+      <input
+        id={id}
+        placeholder=" "
+        aria-invalid={Boolean(error)}
+        {...props}
+        className={`peer block h-14 w-full rounded-md border bg-transparent px-3.5 text-[15px] text-ink focus:outline-none focus:ring-1 transition-colors ${
+          error ? 'border-red-400 focus:ring-red-400' : 'border-white/20 hover:border-white/35 focus:border-accent focus:ring-accent'
+        }`}
+      />
+      <label
+        htmlFor={id}
+        className={`pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 bg-raise px-1 text-[15px] transition-all
+          peer-focus:top-0 peer-focus:text-xs peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs ${
+          error ? 'text-red-400' : 'text-mute peer-focus:text-accent'
+        }`}
+      >
+        {label}
+      </label>
+    </div>
+    {error && (
+      <p className="mt-2 flex items-start gap-1.5 text-xs text-red-400">
+        <HiExclamationCircle className="mt-px w-4 h-4 flex-shrink-0" /> {error}
+      </p>
+    )}
   </div>
 );
 
-/** Centered auth card floating over the terrain backdrop. */
-const AuthShell = ({ title, subtitle, children }) => (
-  <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-app px-4 py-10">
-    <TerrainBackground intensity={0.9} />
-    <div className="relative w-full max-w-sm">
-      <div className="mb-8 flex flex-col items-center text-center">
-        <Logo className="w-10 h-10" />
-        <h1 className="mt-6 text-[28px] font-normal tracking-tight text-ink">{title}</h1>
-        <p className="mt-2 text-sm text-mute">{subtitle}</p>
-      </div>
-      {children}
+/** Password field with a "Show password" checkbox underneath. */
+export const PasswordFields = ({ fields }) => {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="space-y-4">
+      {fields.map((f) => <Field key={f.id} type={show ? 'text' : 'password'} {...f} />)}
+      <label className="flex w-fit cursor-pointer items-center gap-3 text-sm text-ink">
+        <input type="checkbox" checked={show} onChange={(e) => setShow(e.target.checked)} className="h-4 w-4 accent-accent" />
+        Show password
+      </label>
     </div>
-    <p className="relative mt-10 text-center text-xs text-faint">
-      AI DevFlow · a supervisor with Document, Coding and Architect agents
-    </p>
+  );
+};
+
+/** Pill showing the email being signed in with; clicking it goes back to change it. */
+export const EmailChip = ({ email, onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    title="Use a different email"
+    className="mt-4 inline-flex max-w-full items-center gap-2 rounded-full border border-white/15 py-1 pl-1 pr-3 text-sm text-ink hover:bg-white/[0.05]"
+  >
+    <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-2 text-xs font-medium text-white">
+      {email.charAt(0).toUpperCase()}
+    </span>
+    <span className="truncate">{email}</span>
+  </button>
+);
+
+/** Bottom row of a step: a text link on the left, the primary button on the right. */
+export const Actions = ({ secondary, primary }) => (
+  <div className="mt-10 flex items-center justify-between gap-4">
+    <div>{secondary}</div>
+    {primary}
+  </div>
+);
+
+export const TextButton = ({ className = '', ...props }) => (
+  <button type="button" className={`rounded-full px-3 py-2 -ml-3 text-sm font-medium text-accent-2 hover:bg-accent-2/10 disabled:opacity-50 ${className}`} {...props} />
+);
+
+/**
+ * Google-style auth card: logo, heading and subtitle on the left, the current step's form on
+ * the right (stacked on small screens). A thin bar animates along the top edge while `busy`.
+ */
+const AuthShell = ({ title, subtitle, aside, busy, children }) => (
+  <div className="flex min-h-dvh flex-col items-center justify-center bg-app px-4 py-10">
+    <div className="relative w-full max-w-[1040px] overflow-hidden rounded-[28px] border border-white/[0.06] bg-raise px-6 py-9 sm:px-10 sm:py-10">
+      {busy && <div className="absolute inset-x-0 top-0 h-1 overflow-hidden"><div className="h-full w-1/3 animate-[auth-progress_1.1s_ease-in-out_infinite] bg-gradient-to-r from-accent to-accent-2" /></div>}
+      <div className="grid gap-x-12 gap-y-8 md:grid-cols-2">
+        <div>
+          <Logo className="w-11 h-11" />
+          <h1 className="mt-6 text-[32px] leading-tight font-normal tracking-tight text-ink sm:text-4xl">{title}</h1>
+          {subtitle && <p className="mt-4 text-base text-ink">{subtitle}</p>}
+          {aside}
+        </div>
+        <div className="md:pt-16">{children}</div>
+      </div>
+    </div>
+    <p className="mt-6 text-xs text-faint">AI DevFlow · your data stays private to you</p>
   </div>
 );
 

@@ -38,6 +38,7 @@ const Chat = () => {
 
   const loadedThreadRef = useRef(null); // thread whose messages are in state (null = new chat)
   const abortRef = useRef(null);
+  const pickedRef = useRef(null); // agent the user picked for the running turn (null = Auto)
   const bottomRef = useRef(null);
   const composerRef = useRef(null);
   const dragDepth = useRef(0);
@@ -99,12 +100,16 @@ const Chat = () => {
         }
         break;
       case 'route':
+        // A picked agent owns the whole turn – never show another agent as the one working
+        if (pickedRef.current && event.agent !== pickedRef.current) break;
         setRun((r) => ({ ...r, agent: event.agent, text: '', textAgent: null }));
         break;
       case 'tool':
+        if (pickedRef.current && event.agent !== pickedRef.current) break;
         setRun((r) => ({ ...r, tools: [...r.tools, event.name] }));
         break;
       case 'token':
+        if (pickedRef.current && event.agent !== pickedRef.current) break;
         // Text from a different agent than before (e.g. supervisor → worker) starts a fresh draft
         setRun((r) => (r.textAgent === event.agent
           ? { ...r, text: r.text + event.text }
@@ -127,6 +132,7 @@ const Chat = () => {
     const meta = sent.map(({ doc }) => ({ id: doc.id, filename: doc.filename, content_type: doc.content_type, size_bytes: doc.size_bytes }));
     setAttachments([]);
     setMessages((prev) => [...prev, { role: 'user', content: text, mode: mode.agent, attachments: meta, created_at: new Date().toISOString() }]);
+    pickedRef.current = mode.agent;
     setRun(mode.agent ? { ...EMPTY_RUN, agent: mode.agent } : EMPTY_RUN);
     const controller = new AbortController();
     abortRef.current = controller;
@@ -151,9 +157,11 @@ const Chat = () => {
     }
   };
 
+  // Stop the agent on the server too, so the next message (maybe for another agent) starts clean
   const stop = () => {
     abortRef.current?.abort();
-    toast('Stopped. The agent may still finish in the background – reopen the chat to see it.');
+    if (loadedThreadRef.current) threadAPI.stop(loadedThreadRef.current).catch(() => {});
+    toast('Stopped');
   };
 
   /** Upload each file right away (it gets indexed for the agents) and show it as a card in the composer. */
@@ -222,6 +230,7 @@ const Chat = () => {
         attachments={attachments}
         isRunning={Boolean(run)}
         placeholder={mode.placeholder}
+        attachLabel={mode.id === 'rag_agent' ? 'Upload your document' : undefined}
       />
     </>
   );
@@ -266,7 +275,7 @@ const Chat = () => {
           </div>
         )}
       </div>
-      <div className="relative mx-auto w-full max-w-3xl px-4 pb-3">
+      <div className="relative mx-auto w-full max-w-3xl px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         {composer}
         <p className="mt-2 text-center text-[11px] text-faint">AI DevFlow agents can make mistakes. Check important info and review generated code.</p>
       </div>

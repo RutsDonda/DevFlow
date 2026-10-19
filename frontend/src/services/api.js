@@ -57,6 +57,7 @@ export const threadAPI = {
   rename: (id, title) => api.patch(`/threads/${id}`, { title }),
   pin: (id, pinned) => api.patch(`/threads/${id}`, { pinned }),
   remove: (id) => api.delete(`/threads/${id}`),
+  stop: (id) => api.post(`/threads/${id}/stop`),
 };
 
 export const documentAPI = {

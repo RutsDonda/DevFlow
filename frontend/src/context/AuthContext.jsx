@@ -26,7 +26,7 @@ const FIREBASE_ERRORS = {
   'auth/weak-password': 'Password must be at least 6 characters.',
   'auth/too-many-requests': 'Too many attempts. Please wait a moment and try again.',
   'auth/network-request-failed': 'Network error – check your connection.',
-  'auth/operation-not-allowed': 'This sign-in method is disabled in the Firebase console.',
+  'auth/operation-not-allowed': 'Signing up with email isn’t available right now. Please use "Sign in with Google" instead.',
   'auth/unauthorized-domain': 'This domain is not authorised in Firebase → Authentication → Settings.',
   'auth/popup-blocked': 'The sign-in popup was blocked by the browser.',
 };
@@ -97,19 +97,23 @@ export const AuthProvider = ({ children }) => {
     }
   });
 
-  /** Google login: only for people who already created an account. */
+  /** Google login: signs in, creating the account on first use (the Google profile is the sign-up). */
   const loginWithGoogle = () => runFlow(async () => {
     const result = await signInWithPopup(auth, googleProvider);
     try {
       return await authAPI.login();
     } catch (error) {
-      if (error.status === 404) {
-        // The popup auto-creates a Firebase user for unknown Google accounts – remove it again
-        if (getAdditionalUserInfo(result)?.isNewUser) await result.user.delete().catch(() => signOut(auth));
-        else await signOut(auth);
-        throw noAccountError(result.user.email);
+      if (error.status !== 404) {
+        await signOut(auth);
+        throw error;
       }
-      await signOut(auth);
+    }
+    try {
+      return await authAPI.register(result.user.displayName);
+    } catch (error) {
+      // Don't leave a Firebase user behind that has no account in the app
+      if (getAdditionalUserInfo(result)?.isNewUser) await result.user.delete().catch(() => signOut(auth));
+      else await signOut(auth);
       throw error;
     }
   });
@@ -123,12 +127,6 @@ export const AuthProvider = ({ children }) => {
       await cred.user.delete().catch(() => signOut(auth)); // keep Firebase and MongoDB in sync
       throw error;
     }
-  });
-
-  /** Google sign-up: creates the account (or simply signs in if it already exists). */
-  const registerWithGoogle = () => runFlow(async () => {
-    const result = await signInWithPopup(auth, googleProvider);
-    return authAPI.register(result.user.displayName);
   });
 
   const resetPassword = (email) => sendPasswordResetEmail(auth, email);
@@ -149,7 +147,6 @@ export const AuthProvider = ({ children }) => {
         login,
         loginWithGoogle,
         register,
-        registerWithGoogle,
         resetPassword,
         logout,
         refreshProfile,

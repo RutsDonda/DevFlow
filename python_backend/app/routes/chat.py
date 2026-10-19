@@ -7,6 +7,7 @@ app/routes/chat.py – Talk to the multi-agent system and manage conversations.
   GET    /api/threads/{id}         – one conversation with its messages
   PATCH  /api/threads/{id}         – rename and/or pin
   DELETE /api/threads/{id}         – delete conversation + its LangGraph memory
+  POST   /api/threads/{id}/stop    – stop the turn the agents are working on
 """
 
 import json
@@ -20,7 +21,7 @@ from app.core.security import get_registered_user
 from app.models.schemas import ChatRequest, ChatResponse, ThreadDetail, ThreadSummary, UpdateThreadRequest
 from app.services import threads as thread_service
 from app.services import vector_store
-from app.services.chat import run_turn_detached
+from app.services.chat import cancel_turn, run_turn_detached
 
 router = APIRouter(tags=["chat"])
 
@@ -96,8 +97,15 @@ async def update_thread(thread_id: str, body: UpdateThreadRequest, user: Firebas
     return thread_service.serialize_thread(doc)
 
 
+@router.post("/threads/{thread_id}/stop", status_code=204)
+async def stop_thread(thread_id: str, user: FirebaseUser = Depends(get_registered_user)):
+    await thread_service.get_owned_thread(user.uid, thread_id)
+    await cancel_turn(user.uid, thread_id)
+
+
 @router.delete("/threads/{thread_id}", status_code=204)
 async def delete_thread(thread_id: str, request: Request, user: FirebaseUser = Depends(get_registered_user)):
+    await cancel_turn(user.uid, thread_id)
     await thread_service.delete_thread(user.uid, thread_id)
     checkpointer = getattr(request.app.state, "checkpointer", None)
     if checkpointer is not None:

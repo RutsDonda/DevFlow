@@ -6,10 +6,10 @@ export const DOC_ACCEPT = '.pdf,.docx,.txt,.md,.csv,.json,.html,.xml,.yaml,.yml,
 
 /**
  * ChatGPT-style pill composer: attached-file cards, auto-growing textarea, + (attach) and send / stop.
- * `attachments` = [{ key, name, size, status, error }]
+ * `attachments` = [{ key, name, size, status, error }]; `attachLabel` turns the + into a labelled button.
  */
 const Composer = forwardRef(({
-  onSend, onStop, onAttach, onRemoveAttachment, attachments = [], isRunning, placeholder,
+  onSend, onStop, onAttach, onRemoveAttachment, attachments = [], isRunning, placeholder, attachLabel,
 }, ref) => {
   const [value, setValue] = useState('');
   const textareaRef = useRef(null);
@@ -72,14 +72,26 @@ const Composer = forwardRef(({
         className="block max-h-60 w-full resize-none bg-transparent px-2 pt-1.5 pb-2 text-[15px] leading-6 text-ink placeholder-faint focus:outline-none"
       />
       <div className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          title="Attach files (PDF, Word, text, code)"
-          className="flex h-9 w-9 items-center justify-center rounded-full text-ink hover:bg-white/[0.08]"
-        >
-          <HiOutlinePlus className="w-5 h-5" />
-        </button>
+        {attachLabel ? (
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            title="Upload PDF, Word or text files"
+            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-white/10 pl-2 pr-3.5 text-[13px] text-ink hover:border-accent/40 hover:bg-accent/10 transition-colors"
+          >
+            <HiOutlinePlus className="w-5 h-5" />
+            {attachLabel}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            title="Attach files (PDF, Word, text, code)"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-ink hover:bg-white/[0.08]"
+          >
+            <HiOutlinePlus className="w-5 h-5" />
+          </button>
+        )}
         <input
           ref={fileRef}
           type="file"

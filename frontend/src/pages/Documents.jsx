@@ -5,6 +5,7 @@ import {
   HiOutlineArrowUpTray,
   HiOutlineChatBubbleLeftEllipsis,
   HiOutlineDocumentText,
+  HiOutlinePlus,
   HiOutlineTrash,
 } from 'react-icons/hi2';
 import { documentAPI } from '../services/api';
@@ -72,6 +73,9 @@ const Documents = () => {
             Your private knowledge base. The <span className="text-ink">Document agent</span> answers only from these files.
           </p>
         </div>
+        <button type="button" onClick={() => fileRef.current?.click()} disabled={progress !== null} className="btn-light">
+          <HiOutlinePlus className="w-4 h-4" /> Upload your document
+        </button>
       </div>
 
       {/* Dropzone */}

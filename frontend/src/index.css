@@ -105,3 +105,9 @@
   from { background-position: 100% 0; }
   to { background-position: -100% 0; }
 }
+
+/* Indeterminate progress bar on the auth card */
+@keyframes auth-progress {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(300%); }
+}
