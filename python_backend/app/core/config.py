@@ -42,7 +42,12 @@ class Settings(BaseSettings):
     llm_model: str | None = Field(None, validation_alias=AliasChoices("LLM_MODEL", "GEMINI_MODEL"))
     # Optional cheaper/faster model for the routing supervisor (defaults to llm_model)
     supervisor_model: str | None = None
-    llm_temperature: float = 0.2
+    # None = the provider's default. Gemini 3 is tuned for its default (1.0); low values degrade its reasoning.
+    llm_temperature: float | None = None
+    # How hard the models think before answering: "minimal" | "low" | "medium" | "high" ("" = model default).
+    # Worker agents do the real work → deep reasoning. The supervisor only picks a worker → lighter.
+    llm_reasoning_effort: str = "high"
+    supervisor_reasoning_effort: str = "medium"
     llm_max_retries: int = 6
     # Client-side throttle per model (0 = off). Set to 5 on the Gemini free tier.
     llm_requests_per_minute: float = 0

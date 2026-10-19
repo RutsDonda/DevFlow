@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { HiOutlineArrowRight, HiOutlineCheck, HiOutlineClipboard, HiOutlineCubeTransparent } from 'react-icons/hi2';
+import VideoCard from './VideoCard';
 import Markdown from './Markdown';
 import FileChip from './FileChip';
 import { agentMeta, modeFor } from '../../config/agents';
@@ -40,7 +41,7 @@ const CopyButton = ({ text }) => {
   );
 };
 
-const MessageBubble = ({ message, projects = {} }) => {
+const MessageBubble = ({ message, projects = {}, videos = {} }) => {
   if (message.role === 'user') {
     const mode = message.mode ? modeFor(message.mode) : null;
     return (
@@ -74,6 +75,9 @@ const MessageBubble = ({ message, projects = {} }) => {
       <div className="text-[15px] text-ink">
         <Markdown>{message.content}</Markdown>
       </div>
+      {(message.video_ids || []).map((id) => (
+        <VideoCard key={id} video={{ id, ...(videos[id] || {}) }} />
+      ))}
       {(message.project_ids || []).map((id) => (
         <ProjectCard key={id} project={{ id, ...(projects[id] || {}) }} />
       ))}

@@ -106,7 +106,19 @@
   to { background-position: -100% 0; }
 }
 
-/* Indeterminate progress bar on the auth card */
+/* Auth form content entering on a tab / step change */
+.auth-enter {
+  animation: auth-enter 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes auth-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-enter { animation: none; }
+}
+
+/* Indeterminate progress bar on the auth page */
 @keyframes auth-progress {
   from { transform: translateX(-100%); }
   to { transform: translateX(300%); }

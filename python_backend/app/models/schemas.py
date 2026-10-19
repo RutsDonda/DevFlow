@@ -10,7 +10,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
-AgentName = Literal["supervisor", "rag_agent", "coding_agent", "architect_agent"]
+AgentName = Literal["supervisor", "rag_agent", "coding_agent", "architect_agent", "video_agent"]
 
 
 # ═════════════════════════════ MongoDB documents ═════════════════════════════
@@ -45,6 +45,7 @@ class StoredMessage(BaseModel):
     mode: AgentName | None = None   # user messages: agent explicitly picked in the UI
     attachments: list[Attachment] = []
     project_ids: list[str] = []      # projects generated during this turn
+    video_ids: list[str] = []        # videos made during this turn
     created_at: datetime
 
 
@@ -131,7 +132,7 @@ class UserOut(BaseModel):
     stats: dict[str, int] = {}
 
 
-WorkerName = Literal["rag_agent", "coding_agent", "architect_agent"]
+WorkerName = Literal["rag_agent", "coding_agent", "architect_agent", "video_agent"]
 
 
 class ChatRequest(BaseModel):
@@ -156,6 +157,7 @@ class MessageOut(BaseModel):
     mode: str | None = None  # user messages: agent the user picked (None = Auto)
     attachments: list[Attachment] = []
     project_ids: list[str] = []
+    video_ids: list[str] = []
     created_at: datetime
 
 
@@ -192,6 +194,24 @@ class DocumentOut(BaseModel):
     num_chars: int
     num_chunks: int
     preview: str
+    created_at: datetime
+
+
+class VideoScene(BaseModel):
+    heading: str = Field(description="Short slide title, max ~8 words")
+    bullets: list[str] = Field(default_factory=list, description="0-4 short on-screen points, max ~12 words each")
+    narration: str = Field(description="What the narrator says during this slide: 2-4 natural spoken sentences (max ~80 words)")
+
+
+class VideoSummary(BaseModel):
+    id: str
+    title: str
+    description: str
+    source_files: list[str]
+    scene_count: int
+    duration_seconds: float
+    size_bytes: int
+    thread_id: str | None
     created_at: datetime
 
 

@@ -15,7 +15,7 @@ from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage, Huma
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
 
 ROUTE_KEY = "route_to"
-WORKER_NAMES = ("rag_agent", "coding_agent", "architect_agent")
+WORKER_NAMES = ("rag_agent", "coding_agent", "architect_agent", "video_agent")
 
 
 def forced_reply(messages: list[BaseMessage]) -> AIMessage | None:

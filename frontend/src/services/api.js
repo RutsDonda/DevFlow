@@ -72,6 +72,12 @@ export const documentAPI = {
   remove: (id) => api.delete(`/documents/${id}`),
 };
 
+export const videoAPI = {
+  list: () => api.get('/videos'),
+  file: (id) => api.get(`/videos/${id}/file`, { responseType: 'blob' }),
+  remove: (id) => api.delete(`/videos/${id}`),
+};
+
 export const projectAPI = {
   list: () => api.get('/projects'),
   get: (id) => api.get(`/projects/${id}`),
@@ -81,7 +87,7 @@ export const projectAPI = {
 
 /**
  * Send a message to the multi-agent system and receive Server-Sent Events.
- * `agent` pins a worker (rag_agent | coding_agent | architect_agent); omit for Auto.
+ * `agent` pins a worker (rag_agent | coding_agent | architect_agent | video_agent); omit for Auto.
  * `documentIds` attaches uploaded documents to the message.
  * Events: thread | route | tool | token | done | error  (see backend app/services/chat.py)
  */

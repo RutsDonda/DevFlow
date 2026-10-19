@@ -17,7 +17,7 @@ from app.agents.graph import build_graph
 from app.core.config import settings
 from app.core.database import close_mongo, connect_mongo, mongo
 from app.core.firebase import init_firebase
-from app.routes import auth, chat, documents, health, projects
+from app.routes import auth, chat, documents, health, projects, videos
 
 logging.basicConfig(
     level=logging.INFO,
@@ -63,7 +63,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-for module in (health, auth, chat, documents, projects):
+for module in (health, auth, chat, documents, projects, videos):
     app.include_router(module.router, prefix="/api")
 
 

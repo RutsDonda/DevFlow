@@ -30,3 +30,8 @@ pypdf==6.21.1
 python-docx==1.2.0
 pyflakes==4.0.3
 numpy==2.5.4
+
+# ── Video agent (narrated explainer videos) ───────────────────────────────────
+pillow==13.0.0                    # renders the slides
+edge-tts==7.3.1                   # free neural text-to-speech for the narration
+imageio-ffmpeg==0.6.0             # bundled ffmpeg binary (no system install needed)

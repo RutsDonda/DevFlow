@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { HiOutlineDocumentArrowUp } from 'react-icons/hi2';
-import { documentAPI, streamChat, threadAPI } from '../services/api';
+import { documentAPI, streamChat, threadAPI, videoAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { MODES } from '../config/agents';
 import MessageBubble from '../components/chat/MessageBubble';
@@ -30,6 +30,7 @@ const Chat = () => {
 
   const [messages, setMessages] = useState([]);
   const [projects, setProjects] = useState({}); // id → summary, for project cards
+  const [videos, setVideos] = useState({});     // id → summary, for video players
   const [run, setRun] = useState(null);           // in-progress turn, null when idle
   const [modeId, setModeId] = useState('auto');
   const [isLoading, setIsLoading] = useState(false);
@@ -52,7 +53,7 @@ const Chat = () => {
 
     if (!threadId) {
       loadedThreadRef.current = null;
-      setMessages([]); setProjects({}); setModeId('auto'); setAttachments([]);
+      setMessages([]); setProjects({}); setVideos({}); setModeId('auto'); setAttachments([]);
       composerRef.current?.focus();
       return undefined;
     }
@@ -65,6 +66,13 @@ const Chat = () => {
         loadedThreadRef.current = threadId;
         setMessages(t.messages);
         setProjects({});
+        setVideos({});
+        // Titles for the video players of this conversation (the files load in each player)
+        if (t.messages.some((m) => m.video_ids?.length)) {
+          videoAPI.list()
+            .then((list) => { if (!cancelled) setVideos(Object.fromEntries(list.map((v) => [v.id, v]))); })
+            .catch(() => {});
+        }
         const lastPick = [...t.messages].reverse().find((m) => m.role === 'user')?.mode;
         setModeId(lastPick || 'auto');
       })
@@ -118,6 +126,7 @@ const Chat = () => {
       case 'done':
         setMessages((prev) => [...prev, event.message]);
         setProjects((prev) => ({ ...prev, ...Object.fromEntries(event.projects.map((p) => [p.id, p])) }));
+        setVideos((prev) => ({ ...prev, ...Object.fromEntries((event.videos || []).map((v) => [v.id, v])) }));
         break;
       case 'error':
         toast.error(event.message, { duration: 6000 });
@@ -230,7 +239,7 @@ const Chat = () => {
         attachments={attachments}
         isRunning={Boolean(run)}
         placeholder={mode.placeholder}
-        attachLabel={mode.id === 'rag_agent' ? 'Upload your document' : undefined}
+        attachLabel={['rag_agent', 'video_agent'].includes(mode.id) ? 'Upload your document' : undefined}
       />
     </>
   );
@@ -269,7 +278,7 @@ const Chat = () => {
           <div className="flex h-full items-center justify-center"><Loader text="" /></div>
         ) : (
           <div className="mx-auto max-w-3xl space-y-10 px-4 py-8">
-            {messages.map((m, i) => <MessageBubble key={`${m.created_at}-${i}`} message={m} projects={projects} />)}
+            {messages.map((m, i) => <MessageBubble key={`${m.created_at}-${i}`} message={m} projects={projects} videos={videos} />)}
             {run && <LiveRun run={run} />}
             <div ref={bottomRef} className="h-4" />
           </div>

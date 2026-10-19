@@ -8,7 +8,7 @@ plain JSON chat endpoints:
   {"type": "route",  "agent": "coding_agent"}         supervisor handed off to a worker
   {"type": "tool",   "agent": "...", "name": "..."}   a worker called a tool
   {"type": "token",  "agent": "...", "text": "..."}   streamed answer text
-  {"type": "done",   "thread": {...}, "message": {...}, "projects": [...]}
+  {"type": "done",   "thread": {...}, "message": {...}, "projects": [...], "videos": [...]}
   {"type": "error",  "message": "..."}
 """
 
@@ -24,10 +24,11 @@ from langgraph.graph.state import CompiledStateGraph
 
 from app.agents.graph import SUPERVISOR, WORKERS
 from app.agents.routing import ROUTE_KEY
-from app.core.database import GENERATED_PROJECTS, col
+from app.core.database import GENERATED_PROJECTS, GENERATED_VIDEOS, col
 from app.services import threads as thread_service
 from app.services.llm import is_capacity_error, retry_after_seconds
 from app.services.projects import serialize_project
+from app.services.videos import serialize_video
 
 logger = logging.getLogger(__name__)
 
@@ -177,6 +178,12 @@ async def run_turn(
                 {"user_id": user_id, "thread_id": tid, "updated_at": {"$gte": started}}
             )
         ]
+        videos = [
+            serialize_video(v)
+            async for v in col(GENERATED_VIDEOS).find(
+                {"user_id": user_id, "thread_id": tid, "created_at": {"$gte": started}}, {"scenes": 0}
+            ).sort("created_at", 1)
+        ]
         now = datetime.now(timezone.utc)
         user_msg = {
             "role": "user", "content": message, "agent": None, "mode": forced_agent,
@@ -187,6 +194,7 @@ async def run_turn(
             "content": answer,
             "agent": agent,
             "project_ids": [p["id"] for p in projects],
+            "video_ids": [v["id"] for v in videos],
             "created_at": now,
         }
         await thread_service.append_turn(user_id, tid, user_msg, assistant_msg)
@@ -196,6 +204,7 @@ async def run_turn(
             "thread": thread_service.serialize_thread(thread),
             "message": assistant_msg,
             "projects": projects,
+            "videos": videos,
         }
     except Exception as exc:
         logger.exception("Chat turn failed for user %s", user_id)

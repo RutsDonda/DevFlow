@@ -3,6 +3,10 @@ app/services/llm.py – Chat-model and embedding factories.
 
 Switch providers with LLM_PROVIDER / EMBEDDING_PROVIDER ("google" or "openai").
 
+Reasoning depth: LLM_REASONING_EFFORT (workers) / SUPERVISOR_REASONING_EFFORT set Gemini's
+`thinking_level` or OpenAI's `reasoning_effort`. A model that rejects the setting is retried
+once without it (and remembered), so a fallback model without thinking support still works.
+
 Resilience on free tiers:
   * LLM_REQUESTS_PER_MINUTE – client-side throttle per model.
   * Automatic model fallback – when a model answers "quota exhausted / rate limited /
@@ -46,8 +50,10 @@ def _rate_limiter() -> InMemoryRateLimiter | None:
 _CAPACITY_MARKERS = ("resource_exhausted", "ratelimit", "rate limit", "rate_limit", "429", "quota",
                      "503", "unavailable", "overloaded")
 _MISSING_MARKERS = ("404", "not_found", "not found", "is not supported")
+_THINKING_MARKERS = ("thinking", "reasoning", "thought")
 _cooldown_until: dict[str, float] = {}   # model name → time.monotonic() when it may be retried
-_siblings: dict[tuple[type, str], BaseChatModel] = {}
+_siblings: dict[tuple[type, str, bool], BaseChatModel] = {}
+_no_thinking: set[str] = set()           # models that rejected a reasoning setting
 
 
 def is_capacity_error(exc: BaseException) -> bool:
@@ -71,12 +77,21 @@ def retry_after_seconds(exc: BaseException, default: float = 60.0) -> float:
     return float(m.group(1)) if m else default
 
 
+def _rejects_thinking(exc: BaseException) -> bool:
+    """A 400-style error about the reasoning setting (e.g. a level the model does not support)."""
+    text = f"{type(exc).__name__} {exc}".lower()
+    return ("400" in text or "invalid" in text) and any(m in text for m in _THINKING_MARKERS)
+
+
 def _plain(name: str) -> str:
     return name.removeprefix("models/")
 
 
 class _FallbackMixin:
-    """Retries a failed call on the next configured model when the current one is out of capacity."""
+    """
+    Retries a failed call on the next configured model when the current one is out of capacity,
+    and once without the reasoning setting when a model rejects it.
+    """
 
     def _candidates(self) -> list[str]:
         names = list(dict.fromkeys([_plain(self.model), *settings.fallback_model_names]))
@@ -85,12 +100,24 @@ class _FallbackMixin:
         return ready or names[:1]
 
     def _for(self, name: str) -> BaseChatModel:
-        if name == _plain(self.model):
+        thinking = name not in _no_thinking
+        if name == _plain(self.model) and thinking:
             return self
-        key = (type(self), name)
+        key = (type(self), name, thinking)
         if key not in _siblings:
-            _siblings[key] = self.model_copy(update={"model": name, "rate_limiter": _rate_limiter()})
+            update = {"model": name, "rate_limiter": _rate_limiter()}
+            if not thinking:
+                update["reasoning_effort"] = None
+            _siblings[key] = self.model_copy(update=update)
         return _siblings[key]
+
+    def _drop_thinking(self, name: str, exc: BaseException) -> bool:
+        """True (and remembered) if `name` rejected the reasoning setting – retry it without."""
+        if name in _no_thinking or getattr(self, "reasoning_effort", None) is None or not _rejects_thinking(exc):
+            return False
+        _no_thinking.add(name)
+        logger.warning("Model %s rejected reasoning_effort=%s – using it without", name, self.reasoning_effort)
+        return True
 
     def _skip(self, name: str, exc: BaseException) -> bool:
         """Put a model on cooldown if the error means 'try another model'. Returns True if so."""
@@ -104,58 +131,81 @@ class _FallbackMixin:
         logger.warning("Model %s unavailable (%s) – skipping it for %.0fs", name, type(exc).__name__, wait)
         return True
 
+    # Each call: every candidate model in turn; the inner loop retries the same model once
+    # when it rejected the reasoning setting.
+
     def _generate(self, messages, stop=None, run_manager=None, **kwargs):
         error = None
         for name in self._candidates():
-            try:
-                return super(_FallbackMixin, self._for(name))._generate(messages, stop=stop, run_manager=run_manager, **kwargs)
-            except Exception as exc:
-                if not self._skip(name, exc):
-                    raise
-                error = exc
+            for _ in range(2):
+                try:
+                    return super(_FallbackMixin, self._for(name))._generate(messages, stop=stop, run_manager=run_manager, **kwargs)
+                except Exception as exc:
+                    if self._drop_thinking(name, exc):
+                        continue
+                    if not self._skip(name, exc):
+                        raise
+                    error = exc
+                    break
         raise error
 
     async def _agenerate(self, messages, stop=None, run_manager=None, **kwargs):
         error = None
         for name in self._candidates():
-            try:
-                return await super(_FallbackMixin, self._for(name))._agenerate(
-                    messages, stop=stop, run_manager=run_manager, **kwargs)
-            except Exception as exc:
-                if not self._skip(name, exc):
-                    raise
-                error = exc
+            for _ in range(2):
+                try:
+                    return await super(_FallbackMixin, self._for(name))._agenerate(
+                        messages, stop=stop, run_manager=run_manager, **kwargs)
+                except Exception as exc:
+                    if self._drop_thinking(name, exc):
+                        continue
+                    if not self._skip(name, exc):
+                        raise
+                    error = exc
+                    break
         raise error
 
     def _stream(self, messages, stop=None, run_manager=None, **kwargs):
         error = None
         for name in self._candidates():
-            started = False
-            try:
-                for chunk in super(_FallbackMixin, self._for(name))._stream(messages, stop=stop, run_manager=run_manager, **kwargs):
-                    started = True
-                    yield chunk
-                return
-            except Exception as exc:
-                if started or not self._skip(name, exc):
-                    raise
-                error = exc
+            for _ in range(2):
+                started = False
+                try:
+                    for chunk in super(_FallbackMixin, self._for(name))._stream(messages, stop=stop, run_manager=run_manager, **kwargs):
+                        started = True
+                        yield chunk
+                    return
+                except Exception as exc:
+                    if started:
+                        raise
+                    if self._drop_thinking(name, exc):
+                        continue
+                    if not self._skip(name, exc):
+                        raise
+                    error = exc
+                    break
         raise error
 
     async def _astream(self, messages, stop=None, run_manager=None, **kwargs):
         error = None
         for name in self._candidates():
-            started = False
-            try:
-                async for chunk in super(_FallbackMixin, self._for(name))._astream(
-                        messages, stop=stop, run_manager=run_manager, **kwargs):
-                    started = True
-                    yield chunk
-                return
-            except Exception as exc:
-                if started or not self._skip(name, exc):
-                    raise
-                error = exc
+            for _ in range(2):
+                started = False
+                try:
+                    async for chunk in super(_FallbackMixin, self._for(name))._astream(
+                            messages, stop=stop, run_manager=run_manager, **kwargs):
+                        started = True
+                        yield chunk
+                    return
+                except Exception as exc:
+                    if started:
+                        raise
+                    if self._drop_thinking(name, exc):
+                        continue
+                    if not self._skip(name, exc):
+                        raise
+                    error = exc
+                    break
         raise error
 
 
@@ -166,10 +216,13 @@ def _with_fallback(cls: type[BaseChatModel]) -> type[BaseChatModel]:
 # ── Factories ─────────────────────────────────────────────────────────────────
 
 @lru_cache
-def get_chat_model(model_name: str | None = None, forced_routing: bool = False) -> BaseChatModel:
+def get_chat_model(
+    model_name: str | None = None, forced_routing: bool = False, reasoning_effort: str | None = None,
+) -> BaseChatModel:
     """
     Return a (cached) chat model; `model_name` defaults to LLM_MODEL.
     `forced_routing=True` builds the supervisor variant that obeys agents picked in the UI.
+    `reasoning_effort` ("minimal" … "high") sets how much the model thinks; defaults to LLM_REASONING_EFFORT.
     """
     from app.agents.routing import forced_routing_class
 
@@ -179,10 +232,14 @@ def get_chat_model(model_name: str | None = None, forced_routing: bool = False) 
 
     common = dict(
         model=model_name or settings.chat_model_name,
-        temperature=settings.llm_temperature,
         max_retries=settings.llm_max_retries,
         rate_limiter=_rate_limiter(),
     )
+    if settings.llm_temperature is not None:
+        common["temperature"] = settings.llm_temperature
+    effort = (settings.llm_reasoning_effort if reasoning_effort is None else reasoning_effort).strip().lower()
+    if effort:
+        common["reasoning_effort"] = effort
 
     if settings.llm_provider == "google":
         from langchain_google_genai import ChatGoogleGenerativeAI

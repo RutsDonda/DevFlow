@@ -1,127 +1,131 @@
 import React, { useState } from 'react';
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { NO_ACCOUNT, authErrorMessage, useAuth } from '../context/AuthContext';
-import { authAPI } from '../services/api';
 import AuthShell, {
-  Actions, Divider, EmailChip, Field, GoogleButton, PasswordFields, TextButton,
+  Divider, Field, FormError, GoogleButton, InlineAction, PasswordField, SubmitButton, emailError,
 } from '../components/auth/AuthShell';
+import RegisterForm from './Register';
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const WRONG_PASSWORD = ['auth/invalid-credential', 'auth/wrong-password'];
 
-/** Two steps like Google: email → Next → password → Next. Google sign-in is offered on the first. */
-const Login = () => {
-  const { login, loginWithGoogle, resetPassword, isAuthenticated } = useAuth();
+const SignInForm = ({ email, setEmail, busy, setBusy, onSwitch, google }) => {
+  const { login, resetPassword } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const [step, setStep] = useState('email'); // 'email' | 'password'
-  const [email, setEmail] = useState(location.state?.email || '');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState(null); // inline message under the current field
-  const [busy, setBusy] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [formError, setFormError] = useState(null);
 
-  if (isAuthenticated && !busy) return <Navigate to="/" replace />;
+  const createOne = <>No account found for this email. <InlineAction onClick={() => onSwitch('register')}>Create one</InlineAction></>;
 
-  const noAccount = (
-    <>Couldn&apos;t find your AI DevFlow account. <Link to="/register" state={{ email }} className="underline underline-offset-2">Create one</Link></>
-  );
-
-  const toPassword = async (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    const value = email.trim();
-    if (!value) return setError('Enter an email');
-    if (!EMAIL_RE.test(value)) return setError('Enter a valid email');
-    setBusy(true);
-    try {
-      const { exists } = await authAPI.checkEmail(value);
-      if (!exists) return setError(noAccount);
-      setError(null);
-      setStep('password');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
-    return undefined;
-  };
-
-  const signIn = async (e) => {
-    e.preventDefault();
-    if (!password) return setError('Enter a password');
+    const errs = { email: emailError(email), password: password ? null : 'Enter your password' };
+    setErrors(errs);
+    setFormError(null);
+    if (errs.email || errs.password) return;
     setBusy(true);
     try {
       await login(email.trim(), password);
       navigate('/');
     } catch (err) {
-      if (WRONG_PASSWORD.includes(err.code)) setError('Wrong password. Try again or click "Forgot password?" to reset it.');
-      else if (err.code === NO_ACCOUNT) { setStep('email'); setError(noAccount); }
-      else setError(authErrorMessage(err));
-    } finally {
-      setBusy(false);
-    }
-    return undefined;
-  };
-
-  const google = async () => {
-    setBusy(true);
-    try {
-      await loginWithGoogle();
-      navigate('/');
-    } catch (err) {
-      const message = authErrorMessage(err);
-      if (message) toast.error(message);
+      if (err.code === NO_ACCOUNT) setErrors({ email: createOne });
+      else if (WRONG_PASSWORD.includes(err.code)) setErrors({ password: 'Incorrect password. Try again or reset it.' });
+      else setFormError(authErrorMessage(err));
     } finally {
       setBusy(false);
     }
   };
 
   const forgot = async () => {
+    const err = emailError(email);
+    if (err) return setErrors({ email: 'Enter your email first, then click "Forgot password?"' });
     try {
       await resetPassword(email.trim());
       toast.success(`Password reset link sent to ${email.trim()}`);
+    } catch (e) {
+      setFormError(authErrorMessage(e));
+    }
+    return undefined;
+  };
+
+  return (
+    <>
+      <FormError>{formError}</FormError>
+      <GoogleButton onClick={() => google(setFormError)} disabled={busy} />
+      <Divider label="or sign in with email" />
+      <form onSubmit={submit} noValidate className="space-y-4">
+        <Field
+          label="Email address" id="email" type="email" autoComplete="email" autoFocus
+          value={email} error={errors.email}
+          onChange={(e) => { setEmail(e.target.value); setErrors((s) => ({ ...s, email: null })); }}
+          onBlur={() => email && setErrors((s) => ({ ...s, email: emailError(email) }))}
+        />
+        <div>
+          <PasswordField
+            label="Password" id="password" autoComplete="current-password"
+            value={password} error={errors.password}
+            onChange={(e) => { setPassword(e.target.value); setErrors((s) => ({ ...s, password: null })); }}
+          />
+          <div className="mt-2 flex justify-end">
+            <button type="button" onClick={forgot} disabled={busy} className="text-[13px] text-mute hover:text-ink">Forgot password?</button>
+          </div>
+        </div>
+        <SubmitButton busy={busy}>Sign in</SubmitButton>
+      </form>
+      <p className="mt-6 text-center text-sm text-mute">
+        New to AI DevFlow? <InlineAction onClick={() => onSwitch('register')}>Create an account</InlineAction>
+      </p>
+    </>
+  );
+};
+
+const HEADERS = {
+  signin: ['Welcome back', 'Sign in to continue to your workspace.'],
+  details: ['Create your account', 'Free to start – it takes less than a minute.'],
+  password: ['Secure your account', 'Step 2 of 2 · choose a password'],
+};
+
+/**
+ * /login and /register: one page with a Sign In / Create Account switcher. Switching only swaps
+ * the URL in place (same component, no remount), so the email typed so far carries over.
+ */
+const Login = () => {
+  const { loginWithGoogle, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const tab = location.pathname === '/register' ? 'register' : 'signin';
+  const [email, setEmail] = useState(location.state?.email || '');
+  const [step, setStep] = useState('details'); // register: 'details' | 'password'
+  const [busy, setBusy] = useState(false);
+
+  if (isAuthenticated && !busy) return <Navigate to="/" replace />;
+
+  const switchTab = (next) => {
+    setStep('details');
+    navigate(next === 'register' ? '/register' : '/login', { replace: true });
+  };
+
+  /** Google sign-in creates the account on first use, so it serves both tabs. */
+  const google = async (setFormError) => {
+    setBusy(true);
+    setFormError(null);
+    try {
+      await loginWithGoogle();
+      navigate('/');
     } catch (err) {
-      toast.error(authErrorMessage(err));
+      setFormError(authErrorMessage(err));
+    } finally {
+      setBusy(false);
     }
   };
 
-  if (step === 'password') {
-    return (
-      <AuthShell
-        title="Welcome"
-        busy={busy}
-        aside={<EmailChip email={email.trim()} onClick={() => { setStep('email'); setPassword(''); setError(null); }} />}
-      >
-        <form onSubmit={signIn} noValidate>
-          <PasswordFields
-            fields={[{
-              label: 'Enter your password', id: 'password', autoComplete: 'current-password', autoFocus: true,
-              value: password, error, onChange: (e) => { setPassword(e.target.value); setError(null); },
-            }]}
-          />
-          <Actions
-            secondary={<TextButton onClick={forgot} disabled={busy}>Forgot password?</TextButton>}
-            primary={<button type="submit" className="btn-light !px-6" disabled={busy}>Next</button>}
-          />
-        </form>
-      </AuthShell>
-    );
-  }
+  const [title, subtitle] = HEADERS[tab === 'signin' ? 'signin' : step];
+  const shared = { email, setEmail, busy, setBusy, onSwitch: switchTab, google };
 
   return (
-    <AuthShell title="Sign in" subtitle="to continue to AI DevFlow" busy={busy}>
-      <form onSubmit={toPassword} noValidate>
-        <Field
-          label="Email" id="email" type="email" autoComplete="email" autoFocus
-          value={email} error={error} onChange={(e) => { setEmail(e.target.value); setError(null); }}
-        />
-        <Divider label="or" />
-        <GoogleButton onClick={google} disabled={busy}>Sign in with Google</GoogleButton>
-        <Actions
-          secondary={<TextButton onClick={() => navigate('/register', { state: { email: email.trim() } })}>Create account</TextButton>}
-          primary={<button type="submit" className="btn-light !px-6" disabled={busy}>Next</button>}
-        />
-      </form>
+    <AuthShell tab={tab} onTabChange={switchTab} title={title} subtitle={subtitle} busy={busy}>
+      {tab === 'signin' ? <SignInForm {...shared} /> : <RegisterForm {...shared} step={step} setStep={setStep} />}
     </AuthShell>
   );
 };

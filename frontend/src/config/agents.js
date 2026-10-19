@@ -3,11 +3,12 @@ import {
   HiOutlineCpuChip,
   HiOutlineCubeTransparent,
   HiOutlineDocumentMagnifyingGlass,
+  HiOutlineFilm,
   HiOutlineSparkles,
 } from 'react-icons/hi2';
 
 /**
- * Display metadata for the supervisor and its three worker agents.
+ * Display metadata for the supervisor and its four worker agents.
  * Keys match the agent names used by the backend LangGraph (app/agents/graph.py).
  */
 export const AGENTS = {
@@ -34,6 +35,12 @@ export const AGENTS = {
     name: 'Architect agent',
     icon: HiOutlineCubeTransparent,
     text: 'text-sky-200/90',
+  },
+  video_agent: {
+    id: 'video_agent',
+    name: 'Video agent',
+    icon: HiOutlineFilm,
+    text: 'text-rose-200/90',
   },
 };
 
@@ -102,6 +109,21 @@ export const MODES = [
       'A Flask weather dashboard using a public API',
     ],
   },
+  {
+    id: 'video_agent',
+    agent: 'video_agent',
+    label: 'Video',
+    icon: HiOutlineFilm,
+    text: 'text-rose-200/90',
+    hint: 'Turns a PDF, Word or text file into a narrated explainer video',
+    placeholder: 'Attach a document and describe the video you want',
+    examples: [
+      'Turn my attached PDF into a 2-minute explainer video',
+      'Make a short video summary of my latest document',
+      'Create a narrated lesson video from my notes, with a male voice',
+      'Make a 5-scene presentation video on how HTTPS works',
+    ],
+  },
 ];
 
 export const modeFor = (agent) => MODES.find((m) => m.agent === (agent || null)) || MODES[0];
@@ -115,6 +137,7 @@ export const TOOL_LABELS = {
   number_code_lines: 'Reading the code line by line',
   save_project: 'Writing project files',
   list_my_projects: 'Looking up your projects',
+  create_video: 'Rendering your video – slides, voice-over and MP4',
 };
 
 export const agentMeta = (id) => AGENTS[id] || AGENTS.supervisor;

@@ -12,6 +12,7 @@ Collections (all user-owned documents carry `user_id` = Firebase UID):
   documents           – uploaded file metadata (RAG agent)
   document_chunks     – text chunks + vector embeddings (Atlas Vector Search)
   generated_projects  – projects scaffolded by the Architect agent
+  generated_videos    – videos made by the Video agent (the MP4 itself lives in GridFS "videos")
   checkpoints / checkpoint_writes – LangGraph persistent memory (managed by MongoDBSaver)
 """
 
@@ -32,6 +33,8 @@ CHAT_THREADS = "chat_threads"
 DOCUMENTS = "documents"
 DOCUMENT_CHUNKS = "document_chunks"
 GENERATED_PROJECTS = "generated_projects"
+GENERATED_VIDEOS = "generated_videos"
+VIDEO_BUCKET = "videos"
 
 
 class Mongo:
@@ -90,6 +93,7 @@ async def ensure_indexes() -> None:
     await db[DOCUMENTS].create_index([("user_id", ASCENDING), ("created_at", DESCENDING)])
     await db[DOCUMENT_CHUNKS].create_index([("user_id", ASCENDING), ("document_id", ASCENDING)])
     await db[GENERATED_PROJECTS].create_index([("user_id", ASCENDING), ("updated_at", DESCENDING)])
+    await db[GENERATED_VIDEOS].create_index([("user_id", ASCENDING), ("thread_id", ASCENDING), ("created_at", DESCENDING)])
     await db[GENERATED_PROJECTS].create_index(
         [("user_id", ASCENDING), ("thread_id", ASCENDING), ("slug", ASCENDING)], unique=True
     )

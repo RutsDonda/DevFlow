@@ -7,7 +7,6 @@ import MainLayout from './layouts/MainLayout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
 import Login from './pages/Login';
-import Register from './pages/Register';
 import Loader from './components/common/Loader';
 import NotFound from './pages/NotFound';
 
@@ -26,7 +25,8 @@ const App = () => (
     <AuthProvider>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        {/* Same page as /login (Create Account tab) – switching tabs doesn't remount it */}
+        <Route path="/register" element={<Login />} />
 
         <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
           {/* "/" = new chat, "/c/:threadId" = conversation (one route so the page is not remounted) */}

@@ -19,10 +19,13 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pymongo import ReturnDocument
 
-from app.core.database import CHAT_THREADS, DOCUMENT_CHUNKS, DOCUMENTS, GENERATED_PROJECTS, USER_PROFILES, col
+from app.core.database import (
+    CHAT_THREADS, DOCUMENT_CHUNKS, DOCUMENTS, GENERATED_PROJECTS, GENERATED_VIDEOS, USER_PROFILES, col,
+)
 from app.core.firebase import FirebaseUser
 from app.core.security import ACCOUNT_REQUIRED, get_current_user, get_registered_user
 from app.models.schemas import CheckEmailRequest, CheckEmailResponse, SessionRequest, UserOut
+from app.services import videos as video_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -37,6 +40,7 @@ async def _user_out(user: FirebaseUser, profile: dict) -> dict:
         "conversations": await col(CHAT_THREADS).count_documents({"user_id": user.uid}),
         "documents": await col(DOCUMENTS).count_documents({"user_id": user.uid}),
         "projects": await col(GENERATED_PROJECTS).count_documents({"user_id": user.uid}),
+        "videos": await col(GENERATED_VIDEOS).count_documents({"user_id": user.uid}),
     }
     return {
         "uid": user.uid,
@@ -121,4 +125,5 @@ async def delete_my_data(request: Request, user: FirebaseUser = Depends(get_regi
             await checkpointer.adelete_thread(f"{user.uid}:{tid}")
     for name in (CHAT_THREADS, DOCUMENTS, DOCUMENT_CHUNKS, GENERATED_PROJECTS):
         await col(name).delete_many({"user_id": user.uid})
+    await video_service.delete_user_videos(user.uid)
     await col(USER_PROFILES).delete_one({"_id": user.uid})

@@ -197,7 +197,7 @@ const MainLayout = () => {
             {userMenu && (
               <div className="absolute bottom-full left-2 right-2 mb-1 overflow-hidden rounded-xl border border-white/10 bg-field py-1 shadow-2xl shadow-black/50">
                 <div className="px-3 py-2 text-xs text-faint">
-                  {user?.stats?.conversations ?? 0} chats · {user?.stats?.documents ?? 0} documents · {user?.stats?.projects ?? 0} projects
+                  {user?.stats?.conversations ?? 0} chats · {user?.stats?.documents ?? 0} documents · {user?.stats?.projects ?? 0} projects · {user?.stats?.videos ?? 0} videos
                 </div>
                 <button onClick={async () => { await logout(); navigate('/login'); }} className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-ink hover:bg-white/5">
                   <HiArrowRightOnRectangle className="w-4 h-4" /> Log out

@@ -5,6 +5,7 @@ import {
   HiOutlineArrowUpTray,
   HiOutlineChatBubbleLeftEllipsis,
   HiOutlineDocumentText,
+  HiOutlineFilm,
   HiOutlinePlus,
   HiOutlineTrash,
 } from 'react-icons/hi2';
@@ -63,6 +64,7 @@ const Documents = () => {
   };
 
   const ask = (doc) => navigate('/', { state: { prompt: `Summarise the key points of ${doc.filename}`, mode: 'rag_agent' } });
+  const makeVideo = (doc) => navigate('/', { state: { prompt: `Turn ${doc.filename} into a short narrated explainer video`, mode: 'video_agent' } });
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 md:px-8">
@@ -135,6 +137,9 @@ const Documents = () => {
                   <div className="flex flex-shrink-0 items-center gap-1">
                     <button onClick={() => ask(doc)} className="rounded-lg p-2 text-mute hover:bg-white/5 hover:text-ink" title="Ask about this document">
                       <HiOutlineChatBubbleLeftEllipsis className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => makeVideo(doc)} className="rounded-lg p-2 text-mute hover:bg-white/5 hover:text-ink" title="Make a video from this document">
+                      <HiOutlineFilm className="w-4 h-4" />
                     </button>
                     <button onClick={() => remove(doc)} className="rounded-lg p-2 text-mute hover:bg-white/5 hover:text-red-400" title="Delete">
                       <HiOutlineTrash className="w-4 h-4" />
