@@ -278,7 +278,15 @@ const Chat = () => {
           <div className="flex h-full items-center justify-center"><Loader text="" /></div>
         ) : (
           <div className="mx-auto max-w-3xl space-y-10 px-4 py-8">
-            {messages.map((m, i) => <MessageBubble key={`${m.created_at}-${i}`} message={m} projects={projects} videos={videos} />)}
+            {messages.map((m, i) => (
+              <MessageBubble
+                key={`${m.created_at}-${i}`}
+                message={m}
+                projects={projects}
+                videos={videos}
+                onSuggest={!run && i === messages.length - 1 ? send : undefined}
+              />
+            ))}
             {run && <LiveRun run={run} />}
             <div ref={bottomRef} className="h-4" />
           </div>

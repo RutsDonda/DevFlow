@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { HiOutlineArrowRight, HiOutlineCheck, HiOutlineClipboard, HiOutlineCubeTransparent } from 'react-icons/hi2';
+import {
+  HiOutlineArrowRight, HiOutlineArrowUturnRight, HiOutlineCheck, HiOutlineClipboard, HiOutlineCubeTransparent,
+} from 'react-icons/hi2';
 import VideoCard from './VideoCard';
 import Markdown from './Markdown';
 import FileChip from './FileChip';
@@ -41,7 +43,28 @@ const CopyButton = ({ text }) => {
   );
 };
 
-const MessageBubble = ({ message, projects = {}, videos = {} }) => {
+/** Follow-up prompts the agent suggested; clicking one sends it as the next message. */
+const Suggestions = ({ items, onPick }) => (
+  <div className="mt-5">
+    <p className="mb-2 text-[12px] font-medium uppercase tracking-wider text-faint">Suggested next</p>
+    <div className="flex flex-col items-start gap-2">
+      {items.map((text) => (
+        <button
+          key={text}
+          type="button"
+          onClick={() => onPick(text)}
+          className="group/s inline-flex max-w-full items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3.5 py-2 text-left text-[13.5px] text-mute transition-colors hover:border-accent/40 hover:bg-accent/10 hover:text-ink"
+        >
+          <HiOutlineArrowUturnRight className="h-4 w-4 flex-shrink-0 text-accent-2/70 transition-transform group-hover/s:translate-x-0.5" />
+          <span className="truncate">{text}</span>
+        </button>
+      ))}
+    </div>
+  </div>
+);
+
+/** `onSuggest` is set only on the latest answer while no agent is running. */
+const MessageBubble = ({ message, projects = {}, videos = {}, onSuggest }) => {
   if (message.role === 'user') {
     const mode = message.mode ? modeFor(message.mode) : null;
     return (
@@ -84,6 +107,7 @@ const MessageBubble = ({ message, projects = {}, videos = {} }) => {
       <div className="mt-1 -ml-1.5 opacity-0 transition-opacity group-hover:opacity-100">
         <CopyButton text={message.content} />
       </div>
+      {onSuggest && message.suggestions?.length > 0 && <Suggestions items={message.suggestions} onPick={onSuggest} />}
     </div>
   );
 };

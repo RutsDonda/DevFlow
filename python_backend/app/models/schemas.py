@@ -46,6 +46,7 @@ class StoredMessage(BaseModel):
     attachments: list[Attachment] = []
     project_ids: list[str] = []      # projects generated during this turn
     video_ids: list[str] = []        # videos made during this turn
+    suggestions: list[str] = []      # assistant messages: follow-up prompts shown as buttons
     created_at: datetime
 
 
@@ -158,6 +159,7 @@ class MessageOut(BaseModel):
     attachments: list[Attachment] = []
     project_ids: list[str] = []
     video_ids: list[str] = []
+    suggestions: list[str] = []
     created_at: datetime
 
 

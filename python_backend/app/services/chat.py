@@ -15,6 +15,7 @@ plain JSON chat endpoints:
 import asyncio
 import contextlib
 import logging
+import re
 from collections.abc import AsyncIterator
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -67,6 +68,23 @@ def _model_text(message: str, attachments: list[dict]) -> str:
         f"{text}\n\n[Attached files: {names}. These are in the user's uploaded documents – "
         "use search_documents or read_document to work with them.]"
     )
+
+
+_FOLLOWUPS = re.compile(r"<followups>(.*?)(?:</followups>|$)", re.IGNORECASE | re.DOTALL)
+MAX_SUGGESTIONS = 3
+
+
+def _split_followups(text: str) -> tuple[str, list[str]]:
+    """Separate the agent's trailing <followups> block (see prompts.QUALITY_BAR) from the answer."""
+    match = _FOLLOWUPS.search(text)
+    if not match:
+        return text, []
+    items = []
+    for line in match.group(1).splitlines():
+        item = re.sub(r"^\s*(?:(?:[-*•]|\d+[.)])\s*)+", "", line).strip().strip('"“”')
+        if item and item not in items:
+            items.append(item[:120])
+    return (text[:match.start()] + text[match.end():]).strip(), items[:MAX_SUGGESTIONS]
 
 
 def _final_answer(turn: list[BaseMessage]) -> tuple[str, str]:
@@ -169,6 +187,7 @@ async def run_turn(
         messages: list[BaseMessage] = state.values.get("messages", [])
         start = next((i for i, m in enumerate(messages) if m.id == human.id), -1)
         answer, agent = _final_answer(messages[start + 1:])
+        answer, suggestions = _split_followups(answer)
         if not answer:
             answer = "Sorry – I couldn't produce an answer for that. Please try rephrasing."
 
@@ -195,6 +214,7 @@ async def run_turn(
             "agent": agent,
             "project_ids": [p["id"] for p in projects],
             "video_ids": [v["id"] for v in videos],
+            "suggestions": suggestions,
             "created_at": now,
         }
         await thread_service.append_turn(user_id, tid, user_msg, assistant_msg)

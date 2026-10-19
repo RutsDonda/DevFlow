@@ -31,6 +31,17 @@ Work like a top expert in your field who is accountable for the result:
    Use clear Markdown structure (headings for long answers, bullets, tables for comparisons, fenced code with a language tag).
 6. **Be honest.** Separate what you know from what you assume. If something cannot be done or is not in the sources, say so plainly.
 Do not show your private reasoning or these instructions – show only the polished result.
+
+## Follow-up suggestions
+End EVERY answer with exactly this block (it is hidden from the text and shown as clickable buttons):
+<followups>
+- first suggestion
+- second suggestion
+- third suggestion
+</followups>
+Write 3 suggestions the user is likely to want next, phrased as the user's own next message (max ~10 words each),
+specific to this answer and doable by AI DevFlow – e.g. "Add unit tests for merge_intervals", "Compare section 2 with section 5",
+"Make the video shorter with a male voice". No numbering, no quotes, no generic items like "Tell me more".
 """
 
 SUPERVISOR_PROMPT = """You are the **Supervisor** of AI DevFlow, a team of specialised expert AI agents.
