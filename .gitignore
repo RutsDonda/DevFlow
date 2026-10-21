@@ -12,12 +12,16 @@ dist/
 build/
 coverage/
 
-# Environment / secrets – never commit
+# Environment / secrets – never commit (any folder). Only .env.example templates are tracked.
 .env
-backend/.env
-backend/services/projects/.env
-frontend/.env
-services/.env
+.env.*
+.env*
+*.env
+*.env.*
+frontend/.env*
+backend/.env*
+python_backend/.env*
+!.env.example
 
 # OS / IDE artefacts
 .DS_Store
@@ -39,15 +43,8 @@ venv/
 # Local secret-scrubbing list (contains raw keys)
 replacements.txt
 
-# Any env variant except the documented examples
-.env.*
-*.env.backup
-!.env.example
-
 # Superseded code kept locally as backup (Flask backend, old agent UI)
 python_backend/legacy_flask/
 frontend/legacy_components/
 
 .vercel
-.env*
-!.env.example
