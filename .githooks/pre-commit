@@ -1,0 +1,22 @@
+#!/bin/sh
+# Block commits that stage .env files or obvious secrets.
+# Enable once per clone:  git config core.hooksPath .githooks
+
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+
+for f in $staged; do
+  case "$(basename "$f")" in
+    .env.example) ;;
+    .env|.env.*|*.pem|*.key|replacements.txt)
+      echo "pre-commit: refusing to commit secret file: $f" >&2
+      exit 1 ;;
+  esac
+done
+
+pattern='AIza[0-9A-Za-z_-]{35}|sk-[A-Za-z0-9_-]{20,}|gsk_[A-Za-z0-9]{20,}|gh[pousr]_[A-Za-z0-9]{30,}|-----BEGIN [A-Z ]*PRIVATE KEY'
+if git diff --cached -U0 | grep '^+' | grep -qE "$pattern"; then
+  echo "pre-commit: staged changes look like they contain a secret:" >&2
+  git diff --cached -U0 | grep '^+' | grep -nE "$pattern" | sed -E 's/(.{12}).*/\1…/' >&2
+  echo "Move it to an env var. Bypass only if it's a false positive: git commit --no-verify" >&2
+  exit 1
+fi
